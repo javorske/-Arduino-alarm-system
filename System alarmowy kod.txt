@@ -1,0 +1,191 @@
+#include <Keypad.h>
+
+const byte rows = 4; 
+const byte cols = 4;
+
+//Layout of the Keypad
+char keys[rows][cols] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+
+byte rowPins[rows] = {11,10,9,8}; 
+byte colPins[cols] = {7,6,A4,A5}; 
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, rows, cols); //Create the Keypad
+
+const long interval = 1000;
+unsigned long previousMillis = 0;
+int sensor1 = 13; //PIR sensor
+int state = 0; //Current state of the PIR sensor
+bool motionDetected = false;
+bool locked = false;
+char key;
+int stateButton;
+int stateDeactBtn = LOW;
+
+int pinButton = 4;
+int deactivationBtn = 5;
+
+int ledGreen = 3; 
+int ledRed = 2; 
+
+int buzzer = 12; 
+
+String passcode = "1234"; //Passcode to lock or unlock the system
+String input = ""; //Input compared to the passcode
+
+void setup() {
+  
+  Serial.begin(9600);
+  pinMode(pinButton, INPUT);
+  pinMode(sensor1, INPUT); 
+  pinMode(ledGreen, OUTPUT); 
+  pinMode(ledRed, OUTPUT); 
+  pinMode(buzzer, OUTPUT);
+}
+
+void loop() {
+  if(locked == false){ //Check if the system is not locked
+    digitalWrite(ledGreen, HIGH);
+    Serial.println("System jest aktywny");
+    delay(1000);
+    while(stateButton!=HIGH){
+    stateButton = digitalRead(pinButton);
+    }
+    if(stateButton == HIGH)
+    {
+      Serial.println("Wprowadz haslo");
+      delay(1000);
+      while(input != "1234")
+      {
+        while(!key){
+        key = keypad.getKey();//Read key from Keypad
+        }
+        if(key)
+          {
+            input += key; //Read passcode and store it in input
+          }
+        if (input != "1234" && input.length() == 4)
+          {
+            Serial.println("Bledne haslo");
+            input = "";
+            Serial.println("Wprowadz ponownie haslo");
+            delay(2000);
+          }
+        key =0;
+      	Serial.println(input);
+      }
+  }
+    if(stateButton == HIGH){ //Check if "#" has been pressed on Keypad
+      if(passcode == input){ //Check if the correct passcode was inputted
+        locked = true; //Lock the system --> activate alarm system
+        input = ""; 
+        tone(buzzer,800,80);
+        delay(200);
+        tone(buzzer,1000,80);
+        for (int i = 0; i < 1; i++) {
+  			digitalWrite(3, HIGH);
+  			delay(500);
+  			digitalWrite(3, LOW);
+  			delay(500);
+		}
+  		digitalWrite(3, HIGH);
+        
+        Serial.println("Uzbrajanie");
+        Serial.println("Prosze czekac...");
+        delay(2000);
+        Serial.println("Zabezpieczono");
+        delay(2000);
+      }
+    }
+    
+    delay(1000);
+  }
+  else if(locked == true){ //Check if the system is locked.
+    //digitalWrite(ledGreen, HIGH); // Turn on green LED.
+    char key = keypad.getKey(); // Read key from keypad.
+    if(key && key != '*'){ //Check if key from Keypad is not equal to "*"
+        input += key; //Read passcode and store it in input
+    }
+    if(key == '*'){ //Check if "*" has been pressed on Keypad
+      if(passcode == input){ //Check if the correct passcode was inputted
+        locked = false; //Unlock the system --> deactivates the alarm system
+        input = "";  
+        delay(100);
+        Serial.println("Disarming");
+        Serial.println("Please Wait...");
+        delay(2500);
+        Serial.println("System");
+        Serial.println("Disarmed");
+        delay(3500);
+      }
+    }
+    state = digitalRead(sensor1); //Check state of PIR sensor
+    
+	if(state == HIGH)
+    { //Check if the PIR sensor has detected any motion
+      while(stateDeactBtn != HIGH)
+      {// tu trzeba wjebac te 20 sekund!!!
+        Serial.println("bla bla");
+        stateDeactBtn = digitalRead(deactivationBtn);
+        if(stateDeactBtn == HIGH)
+        {
+            Serial.println("Masz 20 s na wpisanie kodu dezaktywacyjnego");
+    	  	alarmDeactivation();
+        }
+      }
+      if(stateDeactBtn == LOW)
+      {
+        digitalWrite(ledGreen, LOW); 
+        digitalWrite(ledRed, HIGH);
+        Serial.println("Wykryto ruch!");
+        alarm(); 
+        delay(50);
+      }
+    }
+  }
+    
+    
+    else{ //If no motion is detected by PIR sensor
+      noTone(buzzer);
+      Serial.println("Armed");
+      Serial.println("System Safe!"); 
+      delay(1000);
+      digitalWrite(ledGreen, HIGH); 
+      digitalWrite(ledRed, LOW); 
+    }
+  }
+
+void alarm(){ //Function that makes the buzzer sound like an alarm
+    tone(buzzer, 1500); 
+}
+void alarmDeactivation()
+{
+  digitalWrite(ledRed,LOW);
+  Serial.println("Wprowadz haslo");
+      delay(1000);
+      while(input != "1234")
+      {
+        while(!key){
+        key = keypad.getKey();//Read key from Keypad
+        }
+        if(key)
+          {
+            input += key; //Read passcode and store it in input
+          }
+        if (input != "1234" && input.length() == 4)
+          {
+            Serial.println("Bledne haslo");
+            input = "";
+            Serial.println("Wprowadz ponownie haslo");
+            delay(2000);
+          }
+        key =0;
+      	Serial.println(input);
+      }
+  state = LOW;
+  stateDeactBtn = LOW;
+}
