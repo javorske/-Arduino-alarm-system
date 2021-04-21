@@ -1,4 +1,4 @@
-# System-Alarmowy-Arduino
+# Arduino alarm system
 Project of alarm system in Arduino made in TinkerCad simulator.
 ## This repository contains the Arduino circuit diagram and the code needed to make it work.
 Link to TinkerCad project:
